@@ -28,12 +28,15 @@ use warnings; use strict;
         lazy => 1,
     );
 
+    has num_complete => (is => 'rw', default => sub{0});
+
     sub start {
         shift->scan;
     }
 
     sub scan {
         my $self = shift;
+        $self->num_complete(0);
         $self->progress(
             String::ProgressBar->new( max => int @{$self->servers} )
         );
@@ -49,7 +52,8 @@ use warnings; use strict;
 
     sub handle_response {
         my ($self, $request) = @_[OBJECT, ARG1];
-        $self->progress->update($request->{context});
+        $self->num_complete++;
+        $self->progress->update($self->num_complete);
         $self->progress->write;
         print "\nAll done!\n" if $request->{context} == @{$self->servers};
         # ... do something with $$request{response} here
