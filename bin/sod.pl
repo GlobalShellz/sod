@@ -1,4 +1,4 @@
-#!/usr/bin/perl -Ipoe-component-client-dns/lib
+#!/usr/bin/perl -Ipoe-component-client-dns/lib -Ilib
 use warnings; use strict;
 use POE;
 use SOD::DNS;
