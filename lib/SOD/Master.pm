@@ -25,6 +25,7 @@ sub handle_connection {
 sub handle_input {
     my $self = shift;
     print "Input from client ".$_[HEAP]{remote_ip}.": ".$_[ARG0]."\n";
+    # ... handle client commands (REQUEST, NOTIFY?)
 }
 
 1;

@@ -14,8 +14,19 @@ use SOD::Slave;
 #
 #$sod->run;
 
-SOD::Master->new() if shift eq '--server';
+if ($ARGV[0] eq '--server') {
+    SOD::Master->new;
+}
 
+else {
+    my $client = SOD::Slave->new(
+        server_addr         => $ARGV[0],
+        connection_callback => sub { "You can do something in here too..." },
+        line_callback       => sub { shift->send(@_,"SOMETHING"); "Or like this!" },
+    );
+    print "Connecting to $ARGV[0]:1027...\n";
+    $client->connection; # poke the connection so it starts working
+}
 
 POE::Kernel->run;
 
