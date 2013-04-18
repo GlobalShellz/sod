@@ -1,0 +1,102 @@
+#!/usr/bin/perl
+
+use Modern::Perl;
+
+use Net::DNS;
+
+my $type = "PTR";
+
+my $server_list = 'dnsservers';
+open(SERVERLST, $server_list) || warn ("Failed to open server list $server_list - $!");
+
+
+my @available_servers;
+my @answer_list;
+my @t;
+
+for my $line (<SERVERLST>) {
+	next if $line =~ /^(#|$)/;
+	my %data;
+
+	@data{qw(ip host note)} = split /\s+/, $line, 3;
+	push @available_servers, {%data};
+}
+close SERVERLST;
+
+my $a = 91;
+my $b = 121;
+my $c = 194;
+my $d = 164;
+
+print "\n";
+
+my $server = ((sort { (-1,1)[rand 2] } @available_servers)[1]);
+#my $server;
+my $len = $#available_servers + 1;
+my $outer = 0;
+
+#while ( $outer < $len ) {
+#for $server (@available_servers) {
+#	my $inner = 0;
+#	my @childs;
+
+#	while ( $inner < 100 ) {
+#		my $pid = fork();
+#		open(LIST, "|-");
+#		@list = <LIST>;
+
+#		if ($pid) {
+#			#parent
+#			push(@childs, $pid);
+#		} elsif ($pid == 0) {
+
+#			open(DNS, '>>dnslist');
+
+			my $domain = "$a.$b.$c.$d";
+
+
+			my $resolver   = Net::DNS::Resolver->new(
+				nameservers => [ $server->{ip} ],
+				recurse     => 1,
+				debug       => 0,
+				retry       => 1,
+			);
+
+			$resolver->tcp_timeout(1);
+
+			my $result = $resolver->query($domain, $type);
+	
+			if ($result) {
+				my @answers = $result->answer;
+				for my $answer (@answers) {
+			        	my %answerdata;
+				        @answerdata{qw(host ttl type class val)} =
+		        		    split /\s+/, $answer->string, 5;
+
+				        push @answer_list, {%answerdata};
+        				push @t, $answerdata{host};
+
+					if ( $answerdata{val} =~ /navi\.flyingdutchmen\.be\./ ) {
+						print "\n $server->{ip} OK.\n";
+						my $str = $answer->string;
+						print "$str\n";
+
+#						print DNS "$server->{ip}       \n";
+						
+					} else {
+						print "\n $server->{ip} NOK.\n";
+					}
+				}
+			} else {
+				print "\n $server->{ip} NOK.\n";
+			}
+#		}
+#		$inner++;
+#	}
+#	$outer++;
+#}
+#close (DNS);
+print "\n";
+#for my $answer (@answer_list) {
+#		print "\n @$answer{ qw(class host val ttl) }\n";
+#}

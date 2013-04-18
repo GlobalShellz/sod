@@ -1,0 +1,63 @@
+# server IP     hostname                           comment
+208.67.222.222  resolver1.opendns.com              OpenDNS (see www.opendns.com)
+208.67.220.220  resolver2.opendns.com              OpenDNS (see www.opendns.com)
+80.68.80.25     dnscache2.bytemark.co.uk           Bytemark (UK)
+62.241.162.200  resolver1.systems.pipex.net        PIPEX (UK)
+158.43.240.3    cache0005a.ns.eu.uu.net            UUNet
+4.2.2.2         vnsc-bak.sys.gtei.net
+4.2.2.3         vnsc-lc.sys.gtei.net
+4.2.2.4         vnsc-pri-dsl.genuity.net
+4.2.2.6         vnsc-lc-dsl.genuity.net
+198.6.1.1       cache00.ns.uu.net
+198.6.1.146     cache08.ns.uu.net
+198.6.1.181     auth60.ns.uu.net
+66.93.87.2      dns.sea1.speakeasy.net             Speakeasy Seattle POP
+216.254.95.2    dns.nyc1.speakeasy.net             Speakeasy New York POP
+64.81.45.2      dns.lax1.speakeasy.net             Speakeasy LAX POP
+64.81.111.2     den.speakeasy.net                  Speakeasy Denver POP
+64.81.127.2     dns.dfw1.speakeasy.net             Speakeasy Dallas POP
+64.81.79.2      dns.sfo1.speakeasy.net             Speakeasy San Francisco POP
+64.81.159.2     dns.chi1.speakeasy.net             Speakeasy Chicago POP
+66.92.159.2     dns.wdc1.speakeasy.net             Speakeasy Washington DC
+66.92.224.2     phl.speakeasy.net                  Speakeasy Philadelphia
+66.92.159.2     dns.wdc1.speakeasy.net             Speakeasy Sacramento
+217.115.138.24  svk001.mlonet.de                   OpenNIC Cologne, Germany
+158.152.1.58    ns-cache-1.demon.co.uk             Demon (UK)
+158.152.1.43    ns-cache-2.demon.co.uk             Demon (UK)
+213.120.62.97   inh2dns01.imsnet2.btopenworld.com  BT Openworld (UK)
+213.120.62.98   inh2dns02.imsnet2.btopenworld.com  BT Openworld (UK)
+213.120.62.99   inh2dns03.imsnet2.btopenworld.com  BT Openworld (UK)
+213.120.62.100  inh2dns04.imsnet2.btopenworld.com  BT Openworld (UK)
+213.120.62.102  inh2dns06.imsnet2.btopenworld.com  BT Openworld (UK)
+195.74.102.146  dns-cache1.enta.net                Entanet (UK)
+195.74.102.147  dns-cache2.enta.net                Entanet (UK)
+194.168.4.100   cache1.ntli.net                    NTL (UK)
+212.159.11.150  ns1.plus.net                       Plus.net (UK)
+212.159.13.49   pth-cdns01.plus.net                Plus.net (UK)
+212.159.13.50   pth-cdns02.plus.net                Plus.net (UK)
+212.159.6.9     ptn-cdns01.plus.net                Plus.net (UK)
+212.159.6.10    ptn-cdns02.plus.net                Plus.net (UK)
+205.188.146.145 nstot.proxy.aol.com
+195.8.69.7      resolver1.uk.clara.net             Claranet (UK)
+195.8.69.12     resolver3.uk.clara.net             Claranet (UK)
+212.104.130.9   resolver1.th.eclipse.net.uk        Eclipse (UK)
+212.104.130.65  resolver2.th.eclipse.net.uk        Eclipse (UK)
+194.106.56.6    i-194-106-56-6.freedom2surf.net    Freedom2Surf (UK)
+213.162.97.65   resolver0.metronet.co.uk           Metronet (UK)
+213.162.97.66   resolver1.metronet.co.uk           Metronet (UK)
+213.208.106.212 lon1-dns1.nildram.net              Nildram (UK)
+213.208.106.213 lon1-dns2.nildram.net              Nildram (UK)
+212.67.96.129   dns1.onetel.net.uk                 Onetel (UK)
+212.67.96.130   dns2.onetel.net.uk                 Onetel (UK)
+195.92.195.94   resolver1.svr.pol.co.uk            Freeserve (UK)
+195.92.195.95   resolver2.svr.pol.co.uk            Freeserve (UK)
+62.24.199.13    gdns-1.opaltelecom.net             Opal Telecom / Talk Talk (UK)
+62.24.199.23    gdns-2.opaltelecom.net             Opal Telecom / Talk Talk (UK)
+212.74.112.66   mk-cache-1.ns.uk.tiscali.com       Tiscali (UK)
+212.74.112.67   mk-cache-2.ns.uk.tiscali.com       Tiscali (UK)
+212.135.1.36    nscache0.ns.easynet.net            Easynet (UK)
+212.23.8.1      ns0.zen.co.uk                      Zen (UK)
+212.23.3.1      ns1.zen.co.uk                      Zen (UK)
+130.159.228.50  vif-vres0.cc.strath.ac.uk          University of Strathclyde
+130.159.248.50  vif-vres1.cc.strath.ac.uk          University of Strathclyde
+
