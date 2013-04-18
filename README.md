@@ -1,0 +1,4 @@
+sod
+===
+
+scan open dns
