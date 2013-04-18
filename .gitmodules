@@ -1,0 +1,3 @@
+[submodule "poe-component-client-dns"]
+	path = poe-component-client-dns
+	url = git://github.com/crazedpsyc/poe-component-client-dns.git
