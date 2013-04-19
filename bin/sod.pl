@@ -1,5 +1,6 @@
 #!/usr/bin/perl -Ipoe-component-client-dns/lib -Ilib
 use warnings; use strict;
+use 5.010;
 use POE;
 use SOD::DNS;
 use SOD::Master;
@@ -22,7 +23,7 @@ else {
     my $client = SOD::Slave->new(
         server_addr         => $ARGV[0],
         connection_callback => sub { "You can do something in here too..." },
-        line_callback       => sub { shift->send(@_,"SOMETHING"); "Or like this!" },
+        line_callback       => sub { "Or like this!" },
     );
     print "Connecting to $ARGV[0]:1027...\n";
     $client->connection; # poke the connection so it starts working
