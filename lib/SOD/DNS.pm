@@ -43,7 +43,7 @@ sub do_scan {
     my $self = shift;
     $self->num_complete(0);
     $self->progress(
-        String::ProgressBar->new( max => @{$self->servers} )
+        String::ProgressBar->new( max => int @{$self->servers} )
     );
     $self->progress->write;
     my $count = 1;
