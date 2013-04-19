@@ -10,10 +10,13 @@ use SOD::Slave;
 # so this includes my fork as a git submodule for now
 
 #my $sod = SOD::DNS->new( 
-#    servers => [qw(127.0.0.1 74.82.42.42 8.8.8.8 8.8.4.4)] 
+#    #servers => [qw(127.0.0.1 74.82.42.42 8.8.8.8 8.8.4.4)] 
 #);
 #
 #$sod->run;
+#$sod->servers([qw(127.0.0.1 74.82.42.42 8.8.8.8 8.8.4.4)]);
+#print "scan\n";
+#$sod->scan;
 
 if ($ARGV[0] eq '--server') {
     SOD::Master->new;

@@ -5,10 +5,16 @@ use 5.010;
 use POE 'Component::Client::TCP';
 use Moo;
 use SOD::Nmap;
+use SOD::DNS;
 
 has nmap => (
     is => 'ro',
     default => sub { SOD::Nmap->new },
+);
+
+has dns => (
+    is => 'ro',
+    default => sub { my $dns = SOD::DNS->new; $dns->run; return $dns },
 );
 
 has server_addr => (
@@ -59,7 +65,13 @@ sub handle_response {
         when (/^SCAN (\S+)$/) {
             my @result = $self->nmap->scan($1);
             return $_[HEAP]{server}->put("ERROR: $result[1]") if $result[0];
-            $_[HEAP]{server}->put("DONE\r\n$result[2]");
+
+            return unless @{$result[2]};
+            $self->dns->servers($result[2]);
+            $self->dns->scan;
+
+            $_[HEAP]{server}->put("DONE");
+            $_[HEAP]{server}->put($_) for @{$result[2]};
             $_[HEAP]{server}->put(".");
         }
         when ("HI") {

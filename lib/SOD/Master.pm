@@ -26,7 +26,7 @@ sub handle_connection {
 sub handle_input {
     my $self = shift;
 
-    return $_[HEAP]{body} .= $_[ARG0] if $_[HEAP]{receiving} and $_[ARG0] ne ".";
+    return $_[HEAP]{body} .= "$_[ARG0]\n" if $_[HEAP]{receiving} and $_[ARG0] ne ".";
 
     print "Input from client ".$_[HEAP]{remote_ip}.": ".$_[ARG0]."\n";
 
@@ -44,6 +44,9 @@ sub handle_input {
             my $body = $_[HEAP]{body};
             # ... process $body
             $_[HEAP]{client}->put("THANKS");
+        }
+        when (/^ERROR:$/) {
+            print "Error from $_[HEAP]{remote_ip}: $_[ARG0]\n";
         }
         return when "UNKNOWN";
         default {
