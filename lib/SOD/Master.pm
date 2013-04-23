@@ -5,8 +5,6 @@ use 5.010;
 use POE 'Component::Server::TCP';
 use Moo;
 
-open HOSTS, ">>sod_hosts";
-
 has server => (
     is => 'ro',
     default => sub {
@@ -59,6 +57,9 @@ sub handle_error {
 
 sub next_target {
     my $self = shift;
+    if (@{$self->missed}) {
+        return @{shift @{$self->missed}};
+    }
     my @subnet = @{$self->last_subnet};
     if ($subnet[1] > 254) {
         $subnet[0]++;
