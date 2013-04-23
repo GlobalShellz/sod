@@ -5,6 +5,8 @@ use 5.010;
 use POE 'Component::Server::TCP';
 use Moo;
 
+open HOSTS, ">>sod_hosts";
+
 has server => (
     is => 'ro',
     default => sub {
@@ -19,6 +21,17 @@ has server => (
     }
 );
 
+has missed => (
+    # subnets which errored or were not completed
+    is => 'rw',
+    default => sub { [] },
+);
+
+has last_subnet => (
+    is => 'rw',
+    default => sub { [8, 8, 6] },
+);
+
 sub handle_connection {
     my $self = shift;
     print "New connection from $_[HEAP]{remote_ip}!\n";
@@ -28,13 +41,39 @@ sub handle_connection {
 sub handle_disconnection {
     my $self = shift;
     print "Client at $_[HEAP]{remote_ip} disconnected\n";
-    print "Scan was not completed: ".delete($_[HEAP]{active})."\n" if defined $_[HEAP]{active};
+    if (defined $_[HEAP]{active}) {
+        $self->missed([@{$self->missed}, $_[HEAP]{active}]);
+        print "Scan was not completed: ".join('.',delete($_[HEAP]{active}))."\n";
+    }
 }
 
 sub handle_error {
     my $self = shift;
     my ($syscall_name, $errno, $errstr) = @_[ARG0..ARG2];
     print "Client at $_[HEAP]{remote_ip} reported connection error: $errstr ($errno)\n" if $errno; # $errno==0 is normal disconnection, let `handle_disconnection` take care of it
+    if (defined $_[HEAP]{active} && $errno) {
+        $self->missed([@{$self->missed}, $_[HEAP]{active}]);
+        print "Scan was not completed: ".join('.',delete($_[HEAP]{active}))."\n";
+    }
+}
+
+sub next_target {
+    my $self = shift;
+    my @subnet = @{$self->last_subnet};
+    if ($subnet[1] > 254) {
+        $subnet[0]++;
+        $subnet[1] = 0;
+    }
+    elsif ($subnet[2] > 254) {
+        $subnet[1]++;
+        $subnet[2] = 0;
+    }
+    else { 
+        $subnet[2]++;
+    }
+    return if $subnet[0] > 254;
+    $self->last_subnet(\@subnet);
+    return @subnet;
 }
 
 sub handle_input {
@@ -46,25 +85,40 @@ sub handle_input {
 
     given ($_[ARG0]) {
         when ("READY") {
-            my $target = "127.0.0.0/24";
-            $_[HEAP]{client}->put("SCAN $target");
-            $_[HEAP]{active} = $target;
+            my @target = $self->next_target;
+            unless (@target) {
+                $_[HEAP]{client}->put("TERMINATE");
+                return;
+            }
+            my $subnet = join('.',@target).".0/24";
+            say $subnet;
+            $_[HEAP]{active} = \@target;
+            $_[HEAP]{client}->put("SCAN $subnet");
         }
         when ("DONE") {
             $_[HEAP]{receiving} = 1;
             print "Receiving data from $_[HEAP]{remote_ip}\n";
         }
-        when (".") {
-            $_[HEAP]{receiving} = 0;
-            printf "Received %d bytes from $_[HEAP]{remote_ip}\n", length($_[HEAP]{body});
-            my $body = delete $_[HEAP]{body};
-            # ... process $body
+        when ("NONE") { # No hits from the client, move along
             $_[HEAP]{client}->put("THANKS");
             delete $_[HEAP]{active};
         }
-        when (/^ERROR:$/) {
+        when (".") {
+            $_[HEAP]{receiving} = 0;
+            if (defined $_[HEAP]{body}) {
+                printf "Received %d bytes from $_[HEAP]{remote_ip}\n", length($_[HEAP]{body});
+                my $body = delete $_[HEAP]{body};
+                # ... process $body
+            }
+            $_[HEAP]{client}->put("THANKS");
+            delete $_[HEAP]{active};
+        }
+        when (/^ERROR:/) {
             print "Error from $_[HEAP]{remote_ip}: $_[ARG0]\n";
-            print "Scan was not completed: ".delete($_[HEAP]{active})."\n" if defined $_[HEAP]{active};
+            if (defined $_[HEAP]{active}) {
+                $self->missed([@{$self->missed}, $_[HEAP]{active}]);
+                print "Scan was not completed: ".join('.',delete($_[HEAP]{active}))."\n";
+            }
         }
         return when "UNKNOWN";
         default {

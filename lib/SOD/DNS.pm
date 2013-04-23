@@ -7,7 +7,7 @@ use String::ProgressBar;
 
 has dns => (
     is => 'ro',
-    default => sub { POE::Component::Client::DNS->spawn( Alias => "dns" ) }
+    default => sub { POE::Component::Client::DNS->spawn( Alias => "dns", Timeout => 20 ) }
 );
 
 has servers => (
@@ -22,6 +22,10 @@ has progress => (
 
 has num_complete => (is => 'rw', default => sub{0});
 
+has sodserver => (
+    is => 'rw',
+    default => sub { undef },
+);
 
 sub start {
     print "Starting DNS Scanner\n";
@@ -60,8 +64,14 @@ sub handle_response {
     $self->num_complete++;
     $self->progress->update($self->num_complete);
     $self->progress->write;
-    print "\nAll done!\n" if $self->num_complete == @{$self->servers};
     # ... do something with $request->{response} here
+
+    $self->sodserver->put($request->{response}->answerfrom) unless $request->{error};
+
+    if($self->num_complete == @{$self->servers}) {
+        print "DNS scan complete\n";
+        $self->sodserver->put(".");
+    }
 }
 
 sub run {

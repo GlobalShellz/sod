@@ -63,22 +63,27 @@ sub handle_response {
 
     given ($_[ARG0]) {
         when (/^SCAN (\S+)$/) {
+            say $1;
             my @result = $self->nmap->scan($1);
             return $_[HEAP]{server}->put("ERROR: $result[1]") if $result[0];
 
-            return unless @{$result[2]};
+            return $_[HEAP]{server}->put("NONE") unless @{$result[2]};
+            print "Starting DNS scan.\n";
             $self->dns->servers($result[2]);
+            $self->dns->sodserver($_[HEAP]{server});
             $self->dns->scan;
+            print "Returning\n";
 
             $_[HEAP]{server}->put("DONE");
-            $_[HEAP]{server}->put($_) for @{$result[2]};
-            $_[HEAP]{server}->put(".");
         }
         when ("HI") {
             $_[HEAP]{server}->put("READY");
         }
+        when ("THANKS") { # yay :3
+            $_[HEAP]{server}->put("READY");
+        }
+        $_[SESSION]->stop, exit 0 when "TERMINATE";
         return when "UNKNOWN";
-        return when "THANKS"; # yay! :3
         default {
             $_[HEAP]{server}->put("UNKNOWN");
         }
