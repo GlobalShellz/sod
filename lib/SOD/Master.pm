@@ -4,6 +4,7 @@ package SOD::Master;
 use 5.010;
 use POE 'Component::Server::TCP';
 use Moo;
+use Net::IP;
 
 has server => (
     is => 'ro',
@@ -27,7 +28,7 @@ has missed => (
 
 has last_subnet => (
     is => 'rw',
-    default => sub { [8, 8, 6] },
+    default => sub { [1, 0, -1] },
 );
 
 sub handle_connection {
@@ -41,7 +42,7 @@ sub handle_disconnection {
     print "Client at $_[HEAP]{remote_ip} disconnected\n";
     if (defined $_[HEAP]{active}) {
         $self->missed([@{$self->missed}, $_[HEAP]{active}]);
-        print "Scan was not completed: ".join('.',delete($_[HEAP]{active}))."\n";
+        print "Scan was not completed: ".join('.',@{delete($_[HEAP]{active})})."\n";
     }
 }
 
@@ -51,7 +52,7 @@ sub handle_error {
     print "Client at $_[HEAP]{remote_ip} reported connection error: $errstr ($errno)\n" if $errno; # $errno==0 is normal disconnection, let `handle_disconnection` take care of it
     if (defined $_[HEAP]{active} && $errno) {
         $self->missed([@{$self->missed}, $_[HEAP]{active}]);
-        print "Scan was not completed: ".join('.',delete($_[HEAP]{active}))."\n";
+        print "Scan was not completed: ".join('.',@{delete($_[HEAP]{active})})."\n";
     }
 }
 
@@ -72,7 +73,11 @@ sub next_target {
     else { 
         $subnet[2]++;
     }
-    return if $subnet[0] > 254;
+    return if $subnet[0] > 223; # 223+ is reserved or multicast
+
+    my $type = Net::IP->new(join('.', @subnet).".0/24")->iptype;
+    return (0) unless $type eq 'PUBLIC';
+
     $self->last_subnet(\@subnet);
     return @subnet;
 }
@@ -86,7 +91,8 @@ sub handle_input {
 
     given ($_[ARG0]) {
         when ("READY") {
-            my @target = $self->next_target;
+            my @target = (0);
+            @target = $self->next_target while $target[0]==0;
             unless (@target) {
                 $_[HEAP]{client}->put("TERMINATE");
                 return;
@@ -118,7 +124,7 @@ sub handle_input {
             print "Error from $_[HEAP]{remote_ip}: $_[ARG0]\n";
             if (defined $_[HEAP]{active}) {
                 $self->missed([@{$self->missed}, $_[HEAP]{active}]);
-                print "Scan was not completed: ".join('.',delete($_[HEAP]{active}))."\n";
+                print "Scan was not completed: ".join('.',@{delete($_[HEAP]{active})})."\n";
             }
         }
         return when "UNKNOWN";

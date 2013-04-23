@@ -82,7 +82,7 @@ sub handle_response {
         when ("THANKS") { # yay :3
             $_[HEAP]{server}->put("READY");
         }
-        $_[SESSION]->stop, exit 0 when "TERMINATE";
+        $_[KERNEL]->stop, exit 0 when "TERMINATE";
         return when "UNKNOWN";
         default {
             $_[HEAP]{server}->put("UNKNOWN");
