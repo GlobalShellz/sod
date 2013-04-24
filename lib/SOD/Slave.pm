@@ -65,6 +65,7 @@ sub handle_response {
         when (/^SCAN (\S+)$/) {
             say $1;
             my @result = $self->nmap->scan($1);
+
             return $_[HEAP]{server}->put("ERROR: $result[1]") if $result[0];
 
             return $_[HEAP]{server}->put("NONE") unless @{$result[2]};
@@ -80,6 +81,7 @@ sub handle_response {
             $_[HEAP]{server}->put("READY");
         }
         when ("THANKS") { # yay :3
+            sleep $ARGV[1] // 0; # optional delay specified in argv
             $_[HEAP]{server}->put("READY");
         }
         $_[KERNEL]->stop, exit 0 when "TERMINATE";

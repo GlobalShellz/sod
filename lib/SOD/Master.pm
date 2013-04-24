@@ -115,7 +115,7 @@ sub handle_input {
             if (defined $_[HEAP]{body}) {
                 printf "Received %d bytes from $_[HEAP]{remote_ip}\n", length($_[HEAP]{body});
                 my $body = delete $_[HEAP]{body};
-                # ... process $body
+                print STDERR "$body";
             }
             $_[HEAP]{client}->put("THANKS");
             delete $_[HEAP]{active};

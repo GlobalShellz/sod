@@ -2,7 +2,7 @@ package SOD::DNS;
 
 use POE 'Component::Client::DNS';
 use Moo;
-use String::ProgressBar;
+#use String::ProgressBar;
 #use DDP; # from Data::Printer; gives p() for prettyprinting
 
 has dns => (
@@ -15,10 +15,10 @@ has servers => (
     default => sub { [] }
 );
 
-has progress => (
-    is => 'rw',
-    lazy => 1,
-);
+#has progress => (
+#    is => 'rw',
+#    lazy => 1,
+#);
 
 has num_complete => (is => 'rw', default => sub{0});
 
@@ -46,14 +46,14 @@ sub do_scan {
     print "do_scan\n";
     my $self = shift;
     $self->num_complete(0);
-    $self->progress(
-        String::ProgressBar->new( max => int @{$self->servers} )
-    );
-    $self->progress->write;
+    # $self->progress(
+    #     String::ProgressBar->new( max => int @{$self->servers} )
+    # );
+    #$self->progress->write;
     my $count = 1;
     $self->dns->resolve(
         event       => "response",
-        host        => "ddg.gg",
+        host        => "isc.org",
         context     => $count++,
         nameservers => [$_]
     ) for @{$self->servers};
@@ -62,8 +62,8 @@ sub do_scan {
 sub handle_response {
     my ($self, $request) = @_[OBJECT, ARG0];
     $self->num_complete++;
-    $self->progress->update($self->num_complete);
-    $self->progress->write;
+#    $self->progress->update($self->num_complete);
+#    $self->progress->write;
     # ... do something with $request->{response} here
 
     $self->sodserver->put($request->{response}->answerfrom) unless $request->{error};
