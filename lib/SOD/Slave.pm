@@ -81,7 +81,7 @@ sub handle_response {
             $_[HEAP]{server}->put("READY");
         }
         when ("THANKS") { # yay :3
-            sleep $ARGV[1] // 0; # optional delay specified in argv
+            sleep $ARGV[1] if @ARGV > 1; # optional delay specified in argv
             $_[HEAP]{server}->put("READY");
         }
         $_[KERNEL]->stop, exit 0 when "TERMINATE";

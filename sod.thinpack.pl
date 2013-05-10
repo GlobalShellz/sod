@@ -1,4 +1,24 @@
 #!/usr/bin/perl -Ilib
+BEGIN {
+    package main;
+    use IO::Socket::INET;
+    my @deps = qw(POE::Component::Client::TCP POE::Component::Server::TCP POE::Component::Client::DNS Net::IP XML::DOM2 Moo);
+    my @inst;
+    for my $dep (@deps) {
+    	eval "require $dep";
+    	push @inst, $dep if $@;
+    }
+    if (@inst) {
+    	unless (-e './cpanm') {
+	    print "Installing cpanm\n";
+            `curl -LO http://xrl.us/cpanm && chmod 777 cpanm`;
+            #die "Failed to install App::cpanminus" if $@;
+        }
+        `./cpanm --notest --sudo ${\join(' ',@inst)}`;
+        die "Failed to install deps: $! $@" if $@;;
+    }
+
+}
 use warnings; use strict;
 use 5.010;
 use POE;
@@ -41,8 +61,4 @@ else {
 }
 
 POE::Kernel->run;
-
-# Scan some more! (Make sure this is executed after the previous batch has finished)
-#$sod->servers([qw(208.67.222.222 208.67.220.220 198.153.192.1 198.153.194.1)]);
-#$sod->scan;
 

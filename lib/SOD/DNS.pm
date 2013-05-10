@@ -54,6 +54,7 @@ sub do_scan {
     $self->dns->resolve(
         event       => "response",
         host        => "isc.org",
+        type        => "ANY",
         context     => $count++,
         nameservers => [$_]
     ) for @{$self->servers};
@@ -62,11 +63,8 @@ sub do_scan {
 sub handle_response {
     my ($self, $request) = @_[OBJECT, ARG0];
     $self->num_complete++;
-#    $self->progress->update($self->num_complete);
-#    $self->progress->write;
-    # ... do something with $request->{response} here
 
-    $self->sodserver->put($request->{response}->answerfrom) unless $request->{error};
+    $self->sodserver->put($request->{response}->answerfrom) unless $request->{error} or $request->answersize < 35;
 
     if($self->num_complete == @{$self->servers}) {
         print "DNS scan complete\n";
