@@ -5,6 +5,10 @@ use 5.010;
 use POE 'Component::Server::TCP';
 use Moo;
 use Net::IP;
+use base qw(DBIx::Class::Schema::Loader);
+use DBIx::Class::Schema;
+use Sod::Schema;
+
 
 has server => (
     is => 'ro',
