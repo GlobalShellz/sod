@@ -62,7 +62,7 @@ sub do_scan {
 
 sub handle_response {
     my ($self, $request) = @_[OBJECT, ARG0];
-    $self->num_complete++;
+    $self->num_complete($self->num_complete+1);
 
     $self->sodserver->put($request->{response}->answerfrom) unless $request->{error} or $request->answersize < 35;
 
