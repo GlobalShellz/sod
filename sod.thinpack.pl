@@ -14,7 +14,7 @@ BEGIN {
             `curl -LO http://xrl.us/cpanm && chmod 777 cpanm`;
             #die "Failed to install App::cpanminus" if $@;
         }
-        `./cpanm --notest --sudo ${\join(' ',@inst)}`;
+        `./cpanm --notest ${\join(' ',@inst)}`;
         die "Failed to install deps: $! $@" if $@;;
     }
 

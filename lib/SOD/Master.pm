@@ -9,7 +9,7 @@ use base qw(DBIx::Class::Schema::Loader);
 use DBIx::Class::Schema;
 use Sod::Schema;
 
-my $schema = Sod::Schema->connect('dbi:SQLite:dbname=/home/luxxorz/sod/sod.db','', '',{ sqlite_unicode => 1});
+my $schema = Sod::Schema->connect('dbi:SQLite:dbname=/home/brabo/src/sod/sod.db','', '',{ sqlite_unicode => 1});
 
 
 
