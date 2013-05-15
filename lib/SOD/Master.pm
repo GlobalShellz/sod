@@ -9,6 +9,7 @@ use base qw(DBIx::Class::Schema::Loader);
 use DBIx::Class::Schema;
 use Sod::Schema;
 
+my $schema = Sod::Schema->connect('dbi:SQLite:dbname=/home/luxxorz/sod/sod.db','', '',{ sqlite_unicode => 1});
 
 has server => (
     is => 'ro',
@@ -30,9 +31,11 @@ has missed => (
     default => sub { [] },
 );
 
+my $rs = $schema->resultset('Track')->find({ id => 1 });
+
 has last_subnet => (
     is => 'rw',
-    default => sub { [1, 0, -1] },
+    default => sub { [$rs->a, $rs->b, $rs->c] },
 );
 
 sub handle_connection {
@@ -46,7 +49,16 @@ sub handle_disconnection {
     print "Client at $_[HEAP]{remote_ip} disconnected\n";
     if (defined $_[HEAP]{active}) {
         $self->missed([@{$self->missed}, $_[HEAP]{active}]);
-        print "Scan was not completed: ".join('.',@{delete($_[HEAP]{active})})."\n";
+	my $a = ($self->last_subnet)[0][0];
+	my $b = ($self->last_subnet)[0][1];
+	my $c = ($self->last_subnet)[0][2];
+	$schema->resultset('Missed')->create({
+		a => $a,
+		b => $b,
+		c => $c,
+	});
+        print "Scan was not completed: $a $b $c\n";
+#".join('.',@{delete($_[HEAP]{active})})."\n";
     }
 }
 
@@ -56,34 +68,56 @@ sub handle_error {
     print "Client at $_[HEAP]{remote_ip} reported connection error: $errstr ($errno)\n" if $errno; # $errno==0 is normal disconnection, let `handle_disconnection` take care of it
     if (defined $_[HEAP]{active} && $errno) {
         $self->missed([@{$self->missed}, $_[HEAP]{active}]);
-        print "Scan was not completed: ".join('.',@{delete($_[HEAP]{active})})."\n";
+	my $a = ($self->last_subnet)[0][0];
+	my $b = ($self->last_subnet)[0][1];
+	my $c = ($self->last_subnet)[0][2];
+	$schema->resultset('Missed')->create({
+		a => $a,
+		b => $b,
+		c => $c,
+	});
+        print "Scan was not completed: $a $b $c\n";
+#".join('.',@{delete($_[HEAP]{active})})."\n";
     }
 }
 
 sub next_target {
     my $self = shift;
+    my @subnet;
+    
     if (@{$self->missed}) {
         return @{shift @{$self->missed}};
-    }
-    my @subnet = @{$self->last_subnet};
+    } elsif ( my $rs = $schema->resultset('Missed')->search({ id => * })) {
+	my $current =  $rs->first;
+	$subnet[0] = $current->a;
+	$subnet[1] = $current->b;
+	$subnet[2] = $current->c;
+	$subnet[2]--;
+    } else {
+	    @subnet = @{$self->last_subnet};
+	    my $rs = $schema->resultset('Track')->find({ id => 1 });
+	    $rs->a($subnet[0]);
+	    $rs->b($subnet[1]);
+	    $rs->c($subnet[2]);
+	    $rs->update;
+	}
     if ($subnet[1] > 254) {
-        $subnet[0]++;
+       	$subnet[0]++;
         $subnet[1] = 0;
     }
     elsif ($subnet[2] > 254) {
         $subnet[1]++;
         $subnet[2] = 0;
-    }
-    else { 
-        $subnet[2]++;
-    }
-    return if $subnet[0] > 223; # 223+ is reserved or multicast
+   }
+   else { 
+       $subnet[2]++;
+   }
+   return if $subnet[0] > 223; # 223+ is reserved or multicast
+   my $type = Net::IP->new(join('.', @subnet).".0/24")->iptype;
+   return (0) unless $type eq 'PUBLIC';
 
-    my $type = Net::IP->new(join('.', @subnet).".0/24")->iptype;
-    return (0) unless $type eq 'PUBLIC';
-
-    $self->last_subnet(\@subnet);
-    return @subnet;
+   $self->last_subnet(\@subnet);
+   return @subnet;
 }
 
 sub handle_input {
@@ -118,8 +152,56 @@ sub handle_input {
             $_[HEAP]{receiving} = 0;
             if (defined $_[HEAP]{body}) {
                 printf "Received %d bytes from $_[HEAP]{remote_ip}\n", length($_[HEAP]{body});
-                my $body = delete $_[HEAP]{body};
-                print STDERR "$body";
+#		my $body = delete $_[HEAP]{body};
+                my @body = split( /\n/, (delete $_[HEAP]{body}));
+#		$_[HEAP]{client}->put("THANKS");
+		my %db;
+#		my $i;
+#		for ( $i = 0, $i < @body; $i+=2; ) {
+#			print "$body[$i], $body[$i+1]";
+#		}
+#		foreach my $key (keys %body) {
+#			print "$key $body{$key}\n";
+#		}
+#                print STDERR "$body";
+		foreach (@body) {
+			print "$_\n";
+			my $recursive = 0;
+			my ($ip, $size) = split( / /, $_);
+			my ($a, $b, $c, $d) = split( /\./, $ip);
+#			$a = ($a =~ m/^[\d]+(\.[\d]+)?$/)?($a*1):$a;
+#			$b = ($b =~ m/^[\d]+(\.[\d]+)?$/)?($b*1):$b;
+#			$c = ($c =~ m/^[\d]+(\.[\d]+)?$/)?($c*1):$c;
+#			$d = ($d =~ m/^[\d]+(\.[\d]+)?$/)?($d*1):$d;
+			$a = int($a);
+			$b = int($b);
+			$c = int($c);
+			$d = int($d);
+
+
+
+			$recursive = 1 unless $size < 3054;
+
+			my $rs = $schema->resultset('Ip')->find({ a => $a, b => $b, c => $c, d => $d });
+			if ($rs) {
+				$rs->recursive($recursive);
+				$rs->size($size);
+				$rs->update;
+			} else {	
+				$schema->resultset('Ip')->create({
+					a => $a,
+					b => $b,
+					c => $c,
+					d => $d,
+					open => 1,
+					recursive => $recursive,
+					size => $size,
+				});
+			}
+
+			$db{$ip} = $size;
+			print "open dns found: $ip $db{$ip}\n";
+		}
             }
             $_[HEAP]{client}->put("THANKS");
             delete $_[HEAP]{active};
@@ -128,7 +210,17 @@ sub handle_input {
             print "Error from $_[HEAP]{remote_ip}: $_[ARG0]\n";
             if (defined $_[HEAP]{active}) {
                 $self->missed([@{$self->missed}, $_[HEAP]{active}]);
-                print "Scan was not completed: ".join('.',@{delete($_[HEAP]{active})})."\n";
+		my $a = ($self->last_subnet)[0][0];
+		my $b = ($self->last_subnet)[0][1];
+		my $c = ($self->last_subnet)[0][2];
+		$schema->resultset('Missed')->create({
+			a => $a,
+			b => $b,
+			c => $c,
+		});
+
+                print "Scan was not completed: $a $b $c\n";
+#".join('.',@{delete($_[HEAP]{active})})."\n";
             }
         }
         return when "UNKNOWN";

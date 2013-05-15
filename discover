@@ -10,9 +10,9 @@ my $type = "ANY";
 
 my $domain = "isc.org";
 
-my $a = 4;
-my $b = 2;
-my $c = 2;
+my $a = 8;
+my $b = 8;
+my $c = 4;
 my $k = 0;
 
 my $z = 10;
@@ -44,6 +44,24 @@ while ($c < 9 ) {
 
 				if ($result) {
 					print "$dns OPEN\n";
+#					for @{$result->answer} {
+#						print "$_\n";
+#					}
+					print "$result->{answersize}\n";
+#					my @pattern = $result->{answer};
+#					while(my($k, $v) = each %{$pattern[$i]}) {
+#					for  (my $i = 0; $i<@pattern; $i++){
+#						while(my ($k, $v)= each $pattern[$i]){
+							
+
+#					foreach my $hash (@answer) {
+#						foreach my $key (keys %$hash) {
+#							print "$k $v\n";
+#							while(my ($k, $v)= each $v){
+#								print "$k $v\n";
+#							}
+#						}
+#					}
 				} else {
 					exit 0;
 				}
