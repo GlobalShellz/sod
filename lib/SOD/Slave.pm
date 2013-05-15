@@ -41,6 +41,15 @@ has connection => (
             RemotePort    => 1027,
             Connected     => sub { $self->handle_connection(@_); $self->connection_callback->($self, @_) },
             ServerInput   => sub { $self->handle_response(@_); $self->line_callback->($self, @_) },
+            ConnectError  => sub {
+                my ($operation, $error_number, $error_string) = @_[ARG0..ARG2];
+                warn "$operation error $error_number: $error_string, retrying in 60 seconds.";
+                $_[KERNEL]->delay( reconnect => 60 );
+            },
+            Disconnected  => sub {
+                warn "Disconnected from server! Reconnecting in 60 seconds.";
+                $_[KERNEL]->delay( reconnect => 60 );
+            },
         );
     },
     lazy => 1,
