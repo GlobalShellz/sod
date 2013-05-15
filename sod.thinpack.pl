@@ -1,7 +1,7 @@
 #!/usr/bin/perl -Ilib
 BEGIN {
     package main;
-    use IO::Socket::INET;
+    use lib "$ENV{PWD}/deps";
     my @deps = qw(POE::Component::Client::TCP POE::Component::Server::TCP POE::Component::Client::DNS Net::IP XML::DOM2 Moo);
     my @inst;
     for my $dep (@deps) {
@@ -14,7 +14,7 @@ BEGIN {
             `curl -LO http://xrl.us/cpanm && chmod 777 cpanm`;
             #die "Failed to install App::cpanminus" if $@;
         }
-        `./cpanm --notest --sudo ${\join(' ',@inst)}`;
+        `./cpanm --notest -l "$ENV{PWD}/deps/" ${\join(' ',@inst)}`;
         #die "Failed to install deps: $! $@" if $@;
     }
 
@@ -23,6 +23,7 @@ use warnings; use strict;
 use 5.010;
 use POE;
 use SOD::DNS;
+use lib "$ENV{PWD}/deps";
 
 # NOTE: This requires changes to PoCo::Client::DNS which have not been merged and released yet,
 # so this includes my fork as a git submodule for now
