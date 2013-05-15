@@ -1,0 +1,108 @@
+#!/usr/bin/perl
+
+use Modern::Perl;
+use Net::DNS;
+
+my $type = "PTR";
+
+my $server_list = 'dnsres';
+open(SERVERLST, $server_list) || warn ("Failed to open server list $server_list - $!");
+
+my @available_servers;
+my @answer_list;
+my @t;
+
+for my $line (<SERVERLST>) {
+	next if $line =~ /^(#|$)/;
+	my %data;
+
+	@data{qw(ip host note)} = split /\s+/, $line, 3;
+	push @available_servers, {%data};
+}
+close SERVERLST;
+
+
+
+my $a = 68;
+my $b = 67;
+my $c = 76;
+my $k = 0;
+
+my $z = 10;
+my $x = 1;
+while ( $x < 254 ) {
+	my @childs;
+        if ( $x < 250 ) {
+                $z = 10;
+        } else {
+                $z = 4;
+        }
+	if ( $k > ($#available_servers - 10) ) {
+		$k = 0;
+	}
+	my @list;
+
+	for ( my $i = 0; $i < $z; $i++ ) {
+		my $pid = fork();
+		open(LIST, "|-");
+		@list = <LIST>;
+		if ($pid) {
+			#parent
+			push(@childs, $pid);
+		} elsif ($pid == 0) {
+			my $y = $x + $i;
+			my $domain = "$a.$b.$c.$y";
+			my $u = $k + $i;
+
+			print "\n$domain : $available_servers[$u]->{ip}\n";
+			   
+
+			my $server = $available_servers[$u];
+
+
+			my $resolver   = Net::DNS::Resolver->new(
+				nameservers => [ $server->{ip} ],
+				recurse     => 1,
+				debug       => 0,
+				retry       => 1,
+			);
+
+			$resolver->tcp_timeout(4);
+
+			my $result = $resolver->query($domain, $type);
+
+			if ($result) {
+				print "\ngot one\n";
+				my @answers = $result->answer;
+				for my $answer (@answers) {
+		        		my %answerdata;
+				        @answerdata{qw(host ttl type class val)} =
+        				    split /\s+/, $answer->string, 5;
+	
+			        	print LIST {%answerdata};
+					print "\n@answerdata{qw(host ttl type class val)}\n";
+			        	push @t, $answerdata{host};
+
+				}
+				
+			}
+
+
+			exit 0;
+		}
+		foreach (@list) {
+		push @answer_list, $_;
+	}
+
+	}
+	foreach (@childs) {
+		waitpid($_, 0);
+	}
+	$k = $k + 10;
+	$x = $x + 10;
+}
+print "\ndone\n";
+for my $answer (@answer_list) {
+		print "\n @$answer{ qw(class host val ttl) }\n";
+}
+

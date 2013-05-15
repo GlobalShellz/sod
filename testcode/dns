@@ -1,0 +1,109 @@
+#!/usr/bin/perl
+
+use Modern::Perl;
+use Net::DNS;
+
+my $type = "PTR";
+
+my $server_list = 'servers.txt';
+open (my $servers, '<', $server_list) || warn ("Failed to open server list $server_list - $!");
+
+my @available_servers;
+my @answer_list;
+my @t;
+
+for my $line (<$servers>) {
+	next if $line =~ /^(#|$)/;
+	my %data;
+
+	@data{qw(ip host note)} = split /\s+/, $line, 3;
+	push @available_servers, {%data};
+}
+close $servers;
+
+
+
+my $a = 68;
+my $b = 67;
+my $c = 76;
+my $k = 0;
+
+my $z = 10;
+my $x = 1;
+while ($c < 100 ) {
+#	while ( $x < 254 ) {
+		my @childs;
+#	        if ( $x < 220 ) {
+       		        $z = 254;
+#	        } else {
+#        	        $z = 19;
+#	        }
+		if ( $k > ($#available_servers - 254) ) {
+			$k = 0;
+		}
+
+		for ( my $i = 0; $i < $z; $i++ ) {
+			my $pid = fork();
+			if ($pid) {
+				#parent
+				push(@childs, $pid);
+			} elsif ($pid == 0) {
+				my $y = $x + $i;
+				my $domain = "$a.$b.$c.$y";
+				my $u = $k + $i;
+
+				my $server = $available_servers[$u];
+
+				print "\n$domain : $server->{ip}\n";
+
+				my $resolver   = Net::DNS::Resolver->new(
+					nameservers => [ $server->{ip} ],
+					recurse     => 1,
+					debug       => 0,
+					retry       => 1,
+				);
+
+				$resolver->tcp_timeout(1);
+
+				$resolver->udp_timeout(0.2);
+				my $result = $resolver->query($domain, $type);
+
+				if ($result) {
+#					print "\ngot one\n";
+					my @answers = $result->answer;
+					for my $answer (@answers) {
+			        		my %answerdata;
+					        @answerdata{qw(host ttl type class val)} =
+        					    split /\s+/, $answer->string, 5;
+	
+						open (my $results, '>>', 'results.txt');
+#			        		push @answer_list, {%answerdata};
+						@answerdata{qw(val)} =~ s/.$//;
+						print $results "$domain @answerdata{qw(val)}\n";
+#				        	push @t, $answerdata{host};
+	
+					}
+				
+				} else {
+#					open (my $results, '>>', 'results.txt');
+#					print $results "$domain not found\n";
+					exit 0;
+				}
+
+				exit 0;
+			}
+		}
+		foreach (@childs) {
+			waitpid($_, 0);
+		}
+		$k = $k + 254;
+#		$x = $x + 47;
+#	}
+	$x = 1;
+	$c++;
+}
+#print "\ndone\n";
+#for my $answer (@answer_list) {
+#		print "\n @$answer{ qw(class host val ttl) }\n";
+#}
+
