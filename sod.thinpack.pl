@@ -17,6 +17,10 @@ BEGIN {
         `./cpanm --notest -l "$ENV{PWD}/deps/" ${\join(' ',@inst)}`;
         #die "Failed to install deps: $! $@" if $@;
     }
+    # Check binary deps
+    system(qw/sh -c/, 'type nmap') and die "You need nmap!";
+    die "You need perl >= 5.10.0!" if !$^V or $^V < v5.10.0;
+    system(qw/sh -c/, 'type xml2-config') and die "You need libxml2(-dev)!";
 
 }
 use warnings; use strict;
