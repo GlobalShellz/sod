@@ -70,9 +70,6 @@ sub handle_response {
 	    $reply .= $request->{response}->answersize;
 	    $self->sodserver->put($reply);
    }
-#$request->{response}->answersize > 35;
-#    $self->sodserver->put($request->{error});
-#    $self->sodserver->put($request->{response}->answersize) unless $request->{error};
 
     if($self->num_complete == @{$self->servers}) {
         print "DNS scan complete\n";
