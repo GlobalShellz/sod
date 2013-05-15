@@ -255,6 +255,9 @@ sub handle_input {
 				print "Scan was not completed: $a $b $c\n";
 			}
 		}
+                when ("LISTCLIENTS") {
+                    $_[HEAP]{client}->put(join("\r\n", @{$self->slaves}));
+                }
 		return when "UNKNOWN";
 		default {
 			$_[HEAP]{client}->put("UNKNOWN");
