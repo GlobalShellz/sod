@@ -1,7 +1,7 @@
 #!/usr/bin/perl -Ilib
 BEGIN {
     package main;
-    use IO::Socket::INET;
+    use lib "$ENV{PWD}/deps/lib/perl5";
     my @deps = qw(POE::Component::Client::TCP POE::Component::Server::TCP POE::Component::Client::DNS Net::IP XML::DOM2 Moo);
     my @inst;
     for my $dep (@deps) {
@@ -14,17 +14,20 @@ BEGIN {
             `curl -LO http://xrl.us/cpanm && chmod 777 cpanm`;
             #die "Failed to install App::cpanminus" if $@;
         }
-        `./cpanm --notest ${\join(' ',@inst)}`;
-        die "Failed to install deps: $! $@" if $@;;
+        `./cpanm --notest -l "$ENV{PWD}/deps/" ${\join(' ',@inst)}`;
+        #die "Failed to install deps: $! $@" if $@;
     }
+    # Check binary deps
+    system(qw/sh -c/, 'type nmap') and die "You need nmap!";
+    die "You need perl >= 5.10.0!" if !$^V or $^V < v5.10.0;
+    system(qw/sh -c/, 'type xml2-config') and die "You need libxml2(-dev)!";
 
 }
 use warnings; use strict;
 use 5.010;
 use POE;
 use SOD::DNS;
-use SOD::Master;
-use SOD::Slave;
+use lib "$ENV{PWD}/deps/lib/perl5";
 
 # NOTE: This requires changes to PoCo::Client::DNS which have not been merged and released yet,
 # so this includes my fork as a git submodule for now
@@ -47,10 +50,12 @@ EOF
 }
 
 if ($ARGV[0] eq '--server') {
+    require "SOD/Master.pm";
     SOD::Master->new;
 }
 
 else {
+    require "SOD/Slave.pm";
     my $client = SOD::Slave->new(
         server_addr         => $ARGV[0],
         connection_callback => sub { "You can do something in here too..." },

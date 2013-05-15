@@ -9,7 +9,7 @@ sub scan {
     my ($self, $target) = @_;
     return 0, "Invalid target" unless $target =~ qr|^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?:/\d{1,2})?$|;
     print "Starting Nmap on $target\n";
-    open(my $fh, "nmap -p53 -Pn --min-parallelism 100 -n -oX - --open $target |") || return 0, "Failed to run nmap: $!";
+    open(my $fh, "nmap -p53 -PN --min-parallelism 100 -n -oX - --open $target |") || return 0, "Failed to run nmap: $!";
     return $?, "Finished.", $self->parse($fh);
 }
 
