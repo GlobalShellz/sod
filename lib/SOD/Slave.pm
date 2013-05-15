@@ -84,8 +84,11 @@ sub handle_response {
             sleep $ARGV[1] if @ARGV > 1; # optional delay specified in argv
             $_[HEAP]{server}->put("READY");
         }
-        $_[KERNEL]->stop, exit 0 when "TERMINATE";
-        return when "UNKNOWN";
+        when ("TERMINATE") { 
+            $_[KERNEL]->stop;
+            exit 0;
+        }
+        when ("UNKNOWN") { return }
         default {
             $_[HEAP]{server}->put("UNKNOWN");
         }
