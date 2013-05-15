@@ -11,8 +11,6 @@ use Sod::Schema;
 
 my $schema = Sod::Schema->connect('dbi:SQLite:dbname=/home/luxxorz/sod/sod.db','', '',{ sqlite_unicode => 1});
 
-
-
 has server => (
 	is => 'ro',
 	default => sub {
@@ -46,6 +44,11 @@ has last_subnet => (
 	default => sub { [$rs->a, $rs->b, $rs->c] },
 );
 
+has slaves => (
+    is => 'rw',
+    default => sub { [] },
+);
+
 sub _start {
 	my $self = shift;
 	$_[KERNEL]->sig(INT => 'handle_kill', @_);
@@ -72,6 +75,7 @@ sub handle_kill {
 sub handle_connection {
 	my $self = shift;
 	print "New connection from $_[HEAP]{remote_ip}!\n";
+        $self->slaves([@{$self->slaves}, $_[HEAP]{remote_ip}]);
 	$_[HEAP]{client}->put("HI");
 }
 
@@ -96,6 +100,9 @@ sub handle_error {
 	my $self = shift;
 	my ($syscall_name, $errno, $errstr) = @_[ARG0..ARG2];
 	print "Client at $_[HEAP]{remote_ip} reported connection error: $errstr ($errno)\n" if $errno; # $errno==0 is normal disconnection, let `handle_disconnection` take care of it
+
+        $self->slaves([grep { $_ ne $_[HEAP]{remote_ip} } @{$self->slaves}]); # Remove the IP from @slaves
+
 	if (defined $_[HEAP]{active} && $errno) {
 		$self->missed([@{$self->missed}, $_[HEAP]{active}]);
 		my $a = ($self->last_subnet)[0][0];
