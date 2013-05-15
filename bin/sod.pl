@@ -3,8 +3,6 @@ use warnings; use strict;
 use 5.010;
 use POE;
 use SOD::DNS;
-use SOD::Master;
-use SOD::Slave;
 
 # NOTE: This requires changes to PoCo::Client::DNS which have not been merged and released yet,
 # so this includes my fork as a git submodule for now
@@ -27,10 +25,12 @@ EOF
 }
 
 if ($ARGV[0] eq '--server') {
+    require "SOD/Master.pm";
     SOD::Master->new;
 }
 
 else {
+    require "SOD/Slave.pm";
     my $client = SOD::Slave->new(
         server_addr         => $ARGV[0],
         connection_callback => sub { "You can do something in here too..." },
