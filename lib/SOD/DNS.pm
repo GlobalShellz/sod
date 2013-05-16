@@ -67,7 +67,8 @@ sub handle_response {
     unless ($request->{error}) {
 	    my $reply = $request->{response}->answerfrom;
 	    $reply .= " ";
-	    $reply .= $request->{response}->answersize;
+	    $reply .= $request->{response}->answersize . " ";
+            $reply .= $request->{response}->header->ra; # Recursion Available?
 	    $self->sodserver->put($reply);
    }
 
