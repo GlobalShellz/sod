@@ -1,8 +1,11 @@
 #!/usr/bin/perl -Ilib
 use warnings; use strict;
+use lib "$ENV{PWD}/deps/lib/perl5";
+
 use 5.010;
 use POE;
 use SOD::DNS;
+
 
 # NOTE: This requires changes to PoCo::Client::DNS which have not been merged and released yet,
 # so this includes my fork as a git submodule for now

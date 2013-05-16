@@ -256,7 +256,7 @@ sub handle_input {
 			}
 		}
                 when ("LISTCLIENTS") {
-                    $_[HEAP]{client}->put(join("\r\n", @{$self->slaves})) if $_[HEAP]{remote_ip} =~ /^127\.0\.0\./;
+                    $_[HEAP]{client}->put(join("\r\n", @{$self->slaves}, '.')) if $_[HEAP]{remote_ip} =~ /^127\.0\.0\./;
                 }
 		return when "UNKNOWN";
 		default {
