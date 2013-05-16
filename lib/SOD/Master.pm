@@ -200,20 +200,23 @@ sub handle_input {
 				my @body = split( /\n/, (delete $_[HEAP]{body}));
 				my %db;
 				foreach (@body) {
+                                        # Validate input
+                                        continue unless /^
+                                            (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+ # IPv4 address
+                                            (\d+)\s+                                # DNS response size
+                                            (\d)                                    # Boolean (single-byte) recursion flag
+                                            $/x;
+
 					print "$_\n";
-					my $recursive = 0;
 					my $open = 0;
-					my ($ip, $size) = split( / /, $_);
+					my ($ip, $size, $recursive) = ($1, $2, $3);
 					my ($a, $b, $c, $d) = split( /\./, $ip);
 					$a = int($a);
 					$b = int($b);
 					$c = int($c);
 					$d = int($d);
 
-
-
-					$recursive = 1 unless $size < 3054;
-					$open = 1 if $size > 25;
+					$open = 1 if $size > 25 or $recursive;
 
 					my $rs = $schema->resultset('Ip')->find({ a => $a, b => $b, c => $c, d => $d });
 					if ($rs) {
