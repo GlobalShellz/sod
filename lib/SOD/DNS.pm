@@ -80,7 +80,7 @@ sub handle_response {
 	    $reply .= " ";
 	    $reply .= $request->{response}->answersize . " ";
             $reply .= $request->{response}->header->ra; # Recursion Available?
-            printf "reply: %s, truncated: %d", $reply, $request->{response}->header->tc;
+            printf "reply: %s, truncated: %d\n", $reply, $request->{response}->header->tc;
 	    $self->sodserver->put($reply);
    }
 
