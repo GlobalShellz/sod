@@ -2,6 +2,7 @@ package SOD::DNS;
 
 use POE 'Component::Client::DNS';
 use Moo;
+use Geo::IP;
 #use String::ProgressBar;
 #use DDP; # from Data::Printer; gives p() for prettyprinting
 
@@ -26,6 +27,8 @@ has sodserver => (
     is => 'rw',
     default => sub { undef },
 );
+
+has geoip => ( is => 'rw', default => sub { Geo::IP->open("./share/GeoLiteCity.dat", GEOIP_STANDARD); });
 
 sub start {
     print "Starting DNS Scanner\n";
@@ -68,7 +71,11 @@ sub handle_response {
 	    my $reply = $request->{response}->answerfrom;
 	    $reply .= " ";
 	    $reply .= $request->{response}->answersize . " ";
-            $reply .= $request->{response}->header->ra; # Recursion Available?
+            $reply .= $request->{response}->header->ra . " "; # Recursion Available?
+		my $record = $self->geoip->record_by_addr($request->{response}->answerfrom);
+		$reply .= $record->country_name . " ";
+		$reply .= $record->city;
+		print "$reply\n";
 	    $self->sodserver->put($reply);
    }
 

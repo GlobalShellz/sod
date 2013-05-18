@@ -209,7 +209,7 @@ sub handle_input {
 
 					print "$_\n";
 					my $open = 0;
-					my ($ip, $size, $recursive) = ($1, $2, $3);
+					my ($ip, $size, $recursive $country, $city) = ($1, $2, $3, $4, $5);
 					my ($a, $b, $c, $d) = split( /\./, $ip);
 					$a = int($a);
 					$b = int($b);
@@ -232,6 +232,8 @@ sub handle_input {
 							open => $open,
 							recursive => $recursive,
 							size => $size,
+							country => $country,
+							city => $city,
 						});
 					}
 
