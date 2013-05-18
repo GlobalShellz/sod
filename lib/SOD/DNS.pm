@@ -27,6 +27,18 @@ has sodserver => (
     default => sub { undef },
 );
 
+#has http => (
+#    is => 'ro',
+#    default => sub {
+#        POE::Component::Client::HTTP->spawn(
+#            Agent => __PACKAGE__,
+#            Alias => 'http',
+#            Timeout => 5, # low timeout, we don't want lingering requests
+#            FollowRedirects => 2,
+#        );
+#    }
+#);
+
 sub start {
     print "Starting DNS Scanner\n";
     my $self = $_[OBJECT];
@@ -43,7 +55,6 @@ sub scan {
 }
 
 sub do_scan {
-    print "do_scan\n";
     my $self = shift;
     $self->num_complete(0);
     # $self->progress(
@@ -69,6 +80,7 @@ sub handle_response {
 	    $reply .= " ";
 	    $reply .= $request->{response}->answersize . " ";
             $reply .= $request->{response}->header->ra; # Recursion Available?
+            printf "reply: %s, truncated: %d", $reply, $request->{response}->header->tc;
 	    $self->sodserver->put($reply);
    }
 

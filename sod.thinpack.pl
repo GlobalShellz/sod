@@ -1,6 +1,7 @@
 #!/usr/bin/perl -Ilib
 BEGIN {
     package main;
+    `mkdir -p deps/lib/perl5` if ! -e 'deps/lib/perl5';
     use lib "$ENV{PWD}/deps/lib/perl5";
     my @deps = qw(POE::Component::Client::TCP POE::Component::Server::TCP POE::Component::Client::DNS Net::IP XML::DOM2 Moo);
     my @inst;
