@@ -2,7 +2,7 @@
 BEGIN {
     package main;
     use lib "$ENV{PWD}/deps/lib/perl5";
-    my @deps = qw(POE::Component::Client::TCP POE::Component::Server::TCP POE::Component::Client::DNS Net::IP XML::DOM2 Moo Geo::IP);
+    my @deps = qw(POE::Component::Client::TCP POE::Component::Server::TCP POE::Component::Client::DNS Net::IP XML::DOM2 Moo);
     my @inst;
     for my $dep (@deps) {
     	eval "require $dep";
