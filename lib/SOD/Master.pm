@@ -5,6 +5,7 @@ use 5.010;
 use POE 'Component::Server::TCP';
 use Moo;
 use Net::IP;
+use Geo::IP;
 use base qw(DBIx::Class::Schema::Loader);
 use DBIx::Class::Schema;
 use Sod::Schema;
@@ -48,6 +49,8 @@ has slaves => (
     is => 'rw',
     default => sub { [] },
 );
+
+has geoip => ( is => 'rw', default => sub { Geo::IP->open("./share/GeoLiteCity.dat", GEOIP_STANDARD); });
 
 sub _start {
 	my $self = shift;
@@ -209,12 +212,15 @@ sub handle_input {
 
 					print "$_\n";
 					my $open = 0;
-					my ($ip, $size, $recursive $country, $city) = ($1, $2, $3, $4, $5);
+					my ($ip, $size, $recursive) = ($1, $2, $3);
 					my ($a, $b, $c, $d) = split( /\./, $ip);
 					$a = int($a);
 					$b = int($b);
 					$c = int($c);
 					$d = int($d);
+					my $record = $self->geoip->record_by_addr($ip);
+					my $country = $record->country_name;
+					my $city = $record->city;
 
 					$open = 1 if $size > 25 or $recursive;
 
