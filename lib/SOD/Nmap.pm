@@ -15,7 +15,9 @@ sub scan {
 
 sub parse {
     my $xml = $_[1];
-    my $doc = XML::DOM2->new( fh => $xml );
+    my $doc;
+    eval { $doc = XML::DOM2->new( fh => $xml ); };
+    if ($@) { return []; }
     print "Nmap done.\n";
     my @elements = $doc->getElementsByName("address");
 
