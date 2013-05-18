@@ -4,3 +4,4 @@ lib/Sod/*
 sod.db
 list
 lib/list.pm
+deps/*
