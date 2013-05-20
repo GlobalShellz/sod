@@ -9,6 +9,7 @@ use Geo::IP;
 use base qw(DBIx::Class::Schema::Loader);
 use DBIx::Class::Schema;
 use Sod::Schema;
+use List::MoreUtils 'firstidx';
 
 my $schema = Sod::Schema->connect('dbi:SQLite:dbname=/home/luxxorz/sod/sod.db','', '',{ sqlite_unicode => 1});
 
@@ -78,7 +79,6 @@ sub handle_kill {
 sub handle_connection {
 	my $self = shift;
 	print "New connection from $_[HEAP]{remote_ip}!\n";
-        $self->slaves([@{$self->slaves}, $_[HEAP]{remote_ip}]);
 	$_[HEAP]{client}->put("HI");
 }
 
@@ -104,7 +104,10 @@ sub handle_error {
 	my ($syscall_name, $errno, $errstr) = @_[ARG0..ARG2];
 	print "Client at $_[HEAP]{remote_ip} reported connection error: $errstr ($errno)\n" if $errno; # $errno==0 is normal disconnection, let `handle_disconnection` take care of it
 
-        $self->slaves([grep { $_ ne $_[HEAP]{remote_ip} } @{$self->slaves}]); # Remove the IP from @slaves
+
+        my @slaves = @{$self->slaves};
+        splice @slaves, (firstidx { $_ eq $_[HEAP]{remote_ip} } @slaves), 1;
+        $self->slaves(\@slaves);
 
 	if (defined $_[HEAP]{active} && $errno) {
 		$self->missed([@{$self->missed}, $_[HEAP]{active}]);
@@ -177,6 +180,7 @@ sub handle_input {
 
 	given ($_[ARG0]) {
 		when ("READY") {
+                        $self->slaves([@{$self->slaves}, $_[HEAP]{remote_ip}]);
 			my @target = (0);
 			@target = $self->next_target while $target[0]==0;
 			unless (@target) {
