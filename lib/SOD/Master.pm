@@ -8,7 +8,7 @@ use Net::IP;
 use Geo::IP;
 use base qw(DBIx::Class::Schema::Loader);
 use DBIx::Class::Schema;
-use Sod::Schema;
+#use Sod::Schema;
 use List::MoreUtils 'firstidx';
 
 my $schema = Sod::Schema->connect('dbi:SQLite:dbname=/home/luxxorz/sod/sod.db','', '',{ sqlite_unicode => 1});
@@ -106,7 +106,7 @@ sub handle_error {
 
 
         my @slaves = @{$self->slaves};
-        splice @slaves, (firstidx { $_ eq $_[HEAP]{remote_ip} } @slaves), 1;
+        splice @slaves, (firstidx { $$_[1] eq $_[HEAP]{remote_ip} && ($$_[2] ? $$_[2] eq $_[HEAP]{nick} : 1) } @slaves), 1;
         $self->slaves(\@slaves);
 
 	if (defined $_[HEAP]{active} && $errno) {
@@ -179,8 +179,12 @@ sub handle_input {
 	print "Input from client ".$_[HEAP]{remote_ip}.": ".$_[ARG0]."\n";
 
 	given ($_[ARG0]) {
-		when ("READY") {
-                        $self->slaves([@{$self->slaves}, $_[HEAP]{remote_ip}]);
+		when (/^READY\s*(\w+)?/) {
+                        $self->slaves([
+                                @{$self->slaves},
+                                [time, $_[HEAP]{remote_ip}, defined $1 ? " $1" : ""]
+                            ]);
+                        $_[HEAP]{cid} = $1 // "";
 			my @target = (0);
 			@target = $self->next_target while $target[0]==0;
 			unless (@target) {
@@ -271,7 +275,10 @@ sub handle_input {
 			}
 		}
                 when ("LISTCLIENTS") {
-                    $_[HEAP]{client}->put(join("\r\n", @{$self->slaves}, '.')) if $_[HEAP]{remote_ip} =~ /^127\.0\.0\./;
+                    return if $_[HEAP]{remote_ip} =~ /^127\.0\.0\./;
+                    for (@{$self->slaves}) {
+                        $_[HEAP]{client}->put(join(" ", @{$_}));
+                    }
                 }
 		return when "UNKNOWN";
 		default {
