@@ -7,6 +7,8 @@ use Moo;
 use SOD::Nmap;
 use SOD::DNS;
 
+our $API_VERSION = 1;
+
 has nmap => (
     is => 'ro',
     default => sub { SOD::Nmap->new },
@@ -87,7 +89,7 @@ sub handle_response {
             $_[HEAP]{server}->put("DONE");
         }
         when ("HI") {
-            $_[HEAP]{server}->put("READY");
+            $_[HEAP]{server}->put("HI v$API_VERSION");
         }
         when ("THANKS") { # yay :3
             sleep $ARGV[1] if @ARGV > 1; # optional delay specified in argv

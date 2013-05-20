@@ -179,13 +179,19 @@ sub handle_input {
 	print "Input from client ".$_[HEAP]{remote_ip}.": ".$_[ARG0]."\n";
 
 	given ($_[ARG0]) {
-		when (/^READY\s*(\w+)?/) {
-                        $self->slaves([
-                                @{$self->slaves},
-                                [time, $_[HEAP]{remote_ip}, defined $1 ? " $1" : ""]
-                            ]);
-                        $_[HEAP]{cid} = $1 // "";
-			my @target = (0);
+		when (/^(READY|HI)\s*(?:v(\d+)\s?(\w+)?)?/) {
+                        $_[HEAP]{protover} = $2 // 0;
+
+                        if (($2 >= 1 && $1 eq 'HI') || !defined $_[HEAP]{not_first}) {
+                            $self->slaves([
+                                    @{$self->slaves},
+                                    [time, $_[HEAP]{remote_ip}, defined $3 ? " $3" : ""]
+                                ]);
+                            $_[HEAP]{cid} = $3 // "";
+                            $_[HEAP]{not_first} = 1;
+                        }
+
+                        my @target = (0);
 			@target = $self->next_target while $target[0]==0;
 			unless (@target) {
 				$_[HEAP]{client}->put("TERMINATE");
@@ -277,7 +283,7 @@ sub handle_input {
                 when ("LISTCLIENTS") {
                     return if $_[HEAP]{remote_ip} =~ /^127\.0\.0\./;
                     for (@{$self->slaves}) {
-                        $_[HEAP]{client}->put(join(" ", @{$_}));
+                        $_[HEAP]{client}->put(join(" ", @{$_}, "\tv$_[HEAP]{protover}"));
                     }
                 }
 		return when "UNKNOWN";
