@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <sys/epoll.h>
 #include <fcntl.h>
+#include <sqlite3.h>
 
 #include "sod.h"
 
@@ -22,6 +23,8 @@ typedef struct cdata {
 
 // Array of client data where fd-3 is the index
 cdata clients[64];
+// Database connection
+static sqlite3 *db;
 
 int handle(int client, char *buf);
 
@@ -38,6 +41,12 @@ int sod_server(char *addr) {
     struct epoll_event *events;
     char client_addr[46]; // 45 is max length of an ipv6 address (with tunnel syntax)
     char buf[128] = {0}; // client command buffer
+
+    if (sqlite3_open("sod.db", &db)) {
+        s_log('E', "Cannot open database: %s", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return EXIT_FAILURE;
+    }
 
     if (inet_pton(AF_INET, addr, &(server.sin_addr)) <= 0) {
         s_log('E', "inet_pton error: %s", strerror(errno));
@@ -199,9 +208,9 @@ int handle(int client, char *buf) {
     s_log('D', "Received from client %s|%d: [%s]", clients[client-3].ip, client, buf);
     if (strncmp(buf, "READY", l) == 0) {
         // TODO: Generate this sensibly, i.e. next_target()
-        clients[client-3].active[0] = '\1';
-        clients[client-3].active[1] = '\0';
-        clients[client-3].active[2] = '\0';
+        clients[client-3].active[0] = 1;
+        clients[client-3].active[1] = 0;
+        clients[client-3].active[2] = 0;
         dprintf(client, "SCAN %s\r\n", "1.0.0.0/24");
     }
     else if (strncmp(buf, "DONE", l) == 0) {

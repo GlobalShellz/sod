@@ -21,14 +21,16 @@ static FILE *log;
 
 void sod_help(char *name) {
     printf("Usage: %s -[vscd] ADDR\n"
+            "  -h\tThis help\n"
             "  -s\tRun in server mode, provide listen address\n"
             "  -c\tRun in client mode, provide server address\n"
             "  -v\tIncrease verbosity\n"
-            "  -d\tSet delay between scans in seconds\n",
+            "  -d\tSet delay between scans in seconds\n"
+            "  -l\tSpecify a log file (default stdout)\n",
             name);
 }
 
-/* Function: s_log
+/* Function: _s_log
  * ---------------
  *  Log to a file or stdout
  *
