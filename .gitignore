@@ -5,3 +5,5 @@ sod.db
 list
 lib/list.pm
 deps/*
+c/*.o
+c/sod
