@@ -1,3 +1,4 @@
+#define _DEFAULT_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -8,6 +9,7 @@
 #include <sys/epoll.h>
 #include <fcntl.h>
 #include <sqlite3.h>
+#include <pcre.h>
 
 #include "sod.h"
 
@@ -25,6 +27,8 @@ typedef struct cdata {
 cdata clients[64];
 // Database connection
 static sqlite3 *db;
+// Client response validation regex
+pcre *re;
 
 int handle(int client, char *buf);
 
@@ -35,10 +39,12 @@ int sod_server(char *addr) {
     int client_sock;
     int c;
     int read_size;
+    int erroffset;
     struct sockaddr_in server, client;
     struct in_addr *listen_addr = malloc(sizeof(struct in_addr));
     struct epoll_event event;
     struct epoll_event *events;
+    const char *error;
     char client_addr[46]; // 45 is max length of an ipv6 address (with tunnel syntax)
     char buf[128] = {0}; // client command buffer
 
@@ -47,6 +53,14 @@ int sod_server(char *addr) {
         sqlite3_close(db);
         return EXIT_FAILURE;
     }
+
+    re = pcre_compile("^"
+            "(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})\\s+" // IPv4 address
+            "(\\d+)\\s+"                                      // DNS response size
+            "(\\d)$",                                         // Boolean (single-byte) recursion flag
+            0,
+            &error, &erroffset,
+            NULL);
 
     if (inet_pton(AF_INET, addr, &(server.sin_addr)) <= 0) {
         s_log('E', "inet_pton error: %s", strerror(errno));
@@ -189,6 +203,14 @@ int sod_server(char *addr) {
 int handle(int client, char *buf) {
     int l = strlen(buf);
     int dl = 0;
+    char *line;
+    int ovector[12];
+    int rc;
+
+    char *sip;
+    char ip[4];
+    int size;
+    char recursive;
 
     if (clients[client-3].receiving && (buf[0] != '.' || l > 3)) {
         // If buffer is too small, grow by 1024
@@ -223,12 +245,33 @@ int handle(int client, char *buf) {
         write(client, "THANKS\r\n", 8);
         memset(clients[client-3].active, 0, 3);
     }
-    else if (buf[0] == '.' && l == 1) {
+    else if (buf[0] == '.' && l == 1 && clients[client-3].receiving) {
         clients[client-3].receiving = 0;
         dl = strlen(clients[client-3].data);
         if (dl > 0) {
-            s_log('D', "received %d bytes (%d buffer):\n%s", dl, clients[client-3].datalen, clients[client-3].data);
-            // Process data
+            s_log('D', "received %d bytes (%d buffer):", dl, clients[client-3].datalen);
+            for (line = strtok(clients[client-3].data, "\r\n"); line; line = strtok(NULL, "\r\n")) {
+                rc = pcre_exec(re,
+                        NULL,
+                        line,
+                        strlen(line),
+                        0, 0,
+                        ovector,
+                        12);
+                if (rc < 0) // Not valid; skip
+                    continue;
+                // null between captured groups to use them separately
+                line[ovector[3]] = 0; // ip
+                line[ovector[5]] = 0; // size
+                line[ovector[7]] = 0; // recursive
+                for (char *sip = line+ovector[2], i=0;
+                        sip != NULL && i<4;
+                        ip[i++]=atoi(strsep(&sip, ".")));
+                size = atoi(line+ovector[4]);
+                recursive = atoi(line+ovector[6]);
+                s_log('D', "ip: %d.%d.%d.%d, size: %d, recursive: %d",
+                        ip[0],ip[1],ip[2],ip[3], size, recursive);
+            }
         }
         write(client, "THANKS\r\n", 8);
         memset(clients[client-3].active, 0, 3);
