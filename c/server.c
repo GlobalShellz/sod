@@ -1,3 +1,10 @@
+/* FILENAME: server.c
+ *
+ * DESCRIPTION:
+ *  SOD master/server
+ *  Manages the SOD databasae, gives clients subnets to scan, etc.
+ */
+
 #define _DEFAULT_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
@@ -32,6 +39,12 @@ pcre *re;
 
 int handle(int client, char *buf);
 
+/* Function: sod_server
+ * --------------------
+ *  Main server function incl. epoll event loop
+ *
+ *  addr: Listen address (IPv4 address string)
+ */
 int sod_server(char *addr) {
     int sfd;
     int efd;
@@ -200,6 +213,13 @@ int sod_server(char *addr) {
     return EXIT_SUCCESS;
 }
 
+/* Function: handle
+ * ----------------
+ *  Handle all input from clients
+ *
+ *  client: File descriptor for client connection
+ *  buf: 128-byte data buffer of client input
+ */
 int handle(int client, char *buf) {
     int l = strlen(buf);
     int dl = 0;
@@ -212,6 +232,7 @@ int handle(int client, char *buf) {
     int size;
     char recursive;
 
+    // Add input to the client's data buffer if in receiving mode
     if (clients[client-3].receiving && (buf[0] != '.' || l > 3)) {
         // If buffer is too small, grow by 1024
         if (clients[client-3].datalen <= (strlen(clients[client-3].data) + l)) {
@@ -228,6 +249,11 @@ int handle(int client, char *buf) {
     l -= 2;
 
     s_log('D', "Received from client %s|%d: [%s]", clients[client-3].ip, client, buf);
+
+    /* READY command
+     * Client is ready to receive a subnet target. Fetch a previously missed
+     * target, or generate the next in line.
+     */
     if (strncmp(buf, "READY", l) == 0) {
         // TODO: Generate this sensibly, i.e. next_target()
         clients[client-3].active[0] = 1;
@@ -235,16 +261,30 @@ int handle(int client, char *buf) {
         clients[client-3].active[2] = 0;
         dprintf(client, "SCAN %s\r\n", "1.0.0.0/24");
     }
+
+    /* DONE command
+     * Client completed a subnet scan, and is about to send results.
+     * Switch to data receiving mode and allocate the client's data buffer.
+     */
     else if (strncmp(buf, "DONE", l) == 0) {
         clients[client-3].receiving = 1;
         clients[client-3].data = malloc(1024*sizeof(char));
         clients[client-3].datalen = 1024*sizeof(char);
         s_log('D', "Ready to receive data from %s|%d", clients[client-3].ip, client);
     }
+
+    /* NONE command
+     * Client completed a subnet scan, and has no results to report.
+     */
     else if (strncmp(buf, "NONE", l) == 0) {
         write(client, "THANKS\r\n", 8);
         memset(clients[client-3].active, 0, 3);
     }
+
+    /* DOT (.) command
+     * Signifies end of data. Switch back to command mode and process
+     * the client's data buffer.
+     */
     else if (buf[0] == '.' && l == 1 && clients[client-3].receiving) {
         clients[client-3].receiving = 0;
         dl = strlen(clients[client-3].data);
@@ -278,9 +318,20 @@ int handle(int client, char *buf) {
         clients[client-3].data = 0;
         free(clients[client-3].data);
     }
+
+    /* ERROR report
+     * Client encountered an error processing a server request, and was unable
+     * to complete its active scan. Report the error, and save the active
+     * subnet for later.
+     */
     else if (l > 6 && strncmp(buf, "ERROR:", 6) == 0) {
         s_log('E', "Client %s|%d reported error: %s", clients[client-3].ip, client, buf+7);
     }
+
+    /* LISTCLIENTS command
+     * When called from IPv4 localhost, report the addresses of all connected
+     * clients.
+     */
     else if (strncmp(buf, "LISTCLIENTS", l) == 0
             && strncmp(clients[client-3].ip, "127.0.0.1", 9) == 0) {
         for (int i=0; i<64; i++) {
@@ -289,6 +340,11 @@ int handle(int client, char *buf) {
         }
         write(client, ".\r\n", 3);
     }
+
+    /* UNKNOWN
+     * Any unknown input in command mode is rejected with the message
+     * 'UNKNOWN'.
+     */
     else {
         write(client, "UNKNOWN\r\n", 9);
     }
