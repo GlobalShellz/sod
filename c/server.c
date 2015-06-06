@@ -25,7 +25,7 @@
 
 typedef struct cdata {
     char receiving; // currently receiving results
-    char active[3]; // active subnet
+    uint8_t active[3]; // active subnet
     char *data;     // result buffer
     int datalen;    // size of data buffer
     char ip[46];    // client IP string
@@ -133,7 +133,6 @@ int sod_server(char *addr) {
         }
 
         for (int i=0; i<n; i++) {
-            s_log('D', "event on fd: %d", events[i].data.fd);
             if ((events[i].events & EPOLLERR) ||
                 (events[i].events & EPOLLHUP) ||
                 (!(events[i].events & EPOLLIN)))
@@ -343,14 +342,14 @@ int handle(int client, char *buf) {
      */
     if (strncmp(buf, "READY", l) == 0) {
         // TODO: Generate this sensibly, i.e. next_target()
-        clients[client-3].active[0] = 1;
-        clients[client-3].active[1] = 0;
-        clients[client-3].active[2] = 0;
         if(!next_target(ip)) {
             s_log('E', "Error generating next target");
             write(client, "ERROR: Unable to generate target\r\n", 34);
             return 0;
         }
+        clients[client-3].active[0] = ip[0];
+        clients[client-3].active[1] = ip[1];
+        clients[client-3].active[2] = ip[2];
         dprintf(client, "SCAN %d.%d.%d.0/24\r\n", ip[0], ip[1], ip[2]);
     }
 
@@ -440,4 +439,31 @@ int handle(int client, char *buf) {
     else {
         write(client, "UNKNOWN\r\n", 9);
     }
+}
+
+/* Function: server_quit
+ * ---------------------
+ *  Safely stop the server, saving to database first.
+ *
+ *  sig: signal number, if called as a signal handler
+ */
+void server_quit(int sig) {
+    sqlite3_stmt *res = NULL;
+
+    s_log('I', "Shutting down due to signal %d.", sig);
+    for (int i=0; i<64; i++) {
+        if (clients[i].ip[0]) {
+            sqlite3_finalize(res);
+            sqlite3_prepare_v2(db,
+                    "INSERT INTO missed VALUES (NULL, ?, ?, ?, 0, NULL)",
+                    51, &res, NULL);
+            sqlite3_bind_int(res, 1, clients[i].active[0]);
+            sqlite3_bind_int(res, 2, clients[i].active[1]);
+            sqlite3_bind_int(res, 3, clients[i].active[2]);
+            sqlite3_step(res);
+        }
+    }
+    sqlite3_close(db);
+    log_close();
+    exit(0);
 }

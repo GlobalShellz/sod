@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <time.h>
+#include <signal.h>
 
 #include "client.h"
 #include "server.h"
@@ -54,6 +55,14 @@ int _s_log(char level, const char *msg, ...) {
     }
     else
         return 1;
+}
+
+/* Function: log_close
+ * -------------------
+ *  Close the log file for shutdown
+ */
+void log_close(void) {
+    fclose(log);
 }
 
 int main(int argc, char **argv) {
@@ -103,10 +112,15 @@ int main(int argc, char **argv) {
         }
     }
 
-    if (client)
+    if (client) {
+        //signal(SIGINT, client_quit);
         return sod_client(client);
-    else if (server)
+    }
+    else if (server) {
+        signal(SIGINT, server_quit);
+        signal(SIGTERM, server_quit);
         return sod_server(server);
+    }
 
     printf("Must have either -s or -c.\n");
     return 1;
