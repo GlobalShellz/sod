@@ -317,6 +317,7 @@ int handle(int client, char *buf) {
     uint8_t ip[4];
     int size;
     char recursive;
+    sqlite3_stmt *res = NULL;
 
     // Add input to the client's data buffer if in receiving mode
     if (clients[client-3].receiving && (buf[0] != '.' || l > 3)) {
@@ -389,8 +390,11 @@ int handle(int client, char *buf) {
                         0, 0,
                         ovector,
                         12);
-                if (rc < 0) // Not valid; skip
+                if (rc < 0) { // Not valid; skip
+                    s_log('D', "Invalid data line from %s|%d: [%s]",
+                            clients[client-3].ip, client, line);
                     continue;
+                }
                 // null between captured groups to use them separately
                 line[ovector[3]] = 0; // ip
                 line[ovector[5]] = 0; // size
@@ -402,6 +406,23 @@ int handle(int client, char *buf) {
                 recursive = atoi(line+ovector[6]);
                 s_log('D', "ip: %d.%d.%d.%d, size: %d, recursive: %d",
                         ip[0],ip[1],ip[2],ip[3], size, recursive);
+
+                // FIXME: Retain `created` column with another embedded select
+                sqlite3_prepare_v2(db,
+                        "INSERT OR REPLACE INTO ips (id, a, b, c, d, open,"
+                        " recursive, size) VALUES ((SELECT id FROM ips"
+                        " WHERE a=:a AND b=:b AND c=:c AND d=:d), :a, :b, :c,"
+                        " :d, :open, :rec, :size)",
+                        171, &res, NULL);
+                sqlite3_bind_int(res, 1, ip[0]);
+                sqlite3_bind_int(res, 2, ip[1]);
+                sqlite3_bind_int(res, 3, ip[2]);
+                sqlite3_bind_int(res, 4, ip[3]);
+                sqlite3_bind_int(res, 5, (size > 25) || recursive ? 1 : 0);
+                sqlite3_bind_int(res, 6, recursive);
+                sqlite3_bind_int(res, 7, size);
+                sqlite3_step(res);
+                sqlite3_finalize(res);
             }
         }
         write(client, "THANKS\r\n", 8);
@@ -417,6 +438,15 @@ int handle(int client, char *buf) {
      */
     else if (l > 6 && strncmp(buf, "ERROR:", 6) == 0) {
         s_log('E', "Client %s|%d reported error: %s", clients[client-3].ip, client, buf+7);
+        sqlite3_prepare_v2(db,
+                "INSERT INTO missed VALUES (NULL, ?, ?, ?, 0, NULL)",
+                51, &res, NULL);
+        sqlite3_bind_int(res, 1, clients[client-3].active[0]);
+        sqlite3_bind_int(res, 2, clients[client-3].active[1]);
+        sqlite3_bind_int(res, 3, clients[client-3].active[2]);
+        sqlite3_step(res);
+        sqlite3_finalize(res);
+        memset(clients[client-3].active, 0, 3);
     }
 
     /* LISTCLIENTS command
