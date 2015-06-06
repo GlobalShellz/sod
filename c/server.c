@@ -484,7 +484,7 @@ void server_quit(int sig) {
 
     s_log('I', "Shutting down due to signal %d.", sig);
     for (int i=0; i<64; i++) {
-        if (clients[i].ip[0]) {
+        if (clients[i].ip[0] && clients[i].active[0]) {
             sqlite3_finalize(res);
             sqlite3_prepare_v2(db,
                     "INSERT INTO missed VALUES (NULL, ?, ?, ?, 0, NULL)",
