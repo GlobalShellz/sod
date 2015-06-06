@@ -17,6 +17,7 @@
 #include <fcntl.h>
 #include <sqlite3.h>
 #include <pcre.h>
+#include <stdint.h>
 
 #include "sod.h"
 
@@ -213,6 +214,92 @@ int sod_server(char *addr) {
     return EXIT_SUCCESS;
 }
 
+/* Function: next_target
+ * ---------------------
+ *  Check for and return a previously missed subnet, or generate
+ *  the next one in line. Keeps the database up to date.
+ *
+ *  ip: char[3] allocated for the result
+ *
+ *  Returns: 1 on success, 0 on failure
+ */
+int next_target(uint8_t *ip) {
+    int c;
+    sqlite3_stmt *res;
+
+    c = sqlite3_prepare_v2(db,
+            "SELECT a, b, c, id FROM missed LIMIT 1",
+            35, // length of above statement including null
+            &res, NULL);
+    if (c != SQLITE_OK) {
+        s_log('E', "SQLite error %d", c);
+        return 0;
+    }
+
+    if (sqlite3_step(res) == SQLITE_ROW) {
+        ip[0] = (uint8_t)sqlite3_column_int(res, 0);
+        ip[1] = (uint8_t)sqlite3_column_int(res, 1);
+        ip[2] = (uint8_t)sqlite3_column_int(res, 2);
+        c = sqlite3_column_int(res, 3);
+        sqlite3_finalize(res);
+        sqlite3_prepare_v2(db,
+                "DELETE FROM missed WHERE id=?",
+                30, &res, NULL);
+        sqlite3_bind_int(res, 1, c);
+        sqlite3_step(res);
+        sqlite3_finalize(res);
+        return 1;
+    }
+    else
+        sqlite3_finalize(res);
+
+    c = sqlite3_prepare_v2(db,
+            "SELECT a, b, c FROM track WHERE id=1",
+            37, &res, NULL);
+    if (c != SQLITE_OK) {
+        s_log('E', "SQLite error %d", c);
+        return 0;
+    }
+
+    if (sqlite3_step(res) == SQLITE_ROW) {
+        ip[0] = (uint8_t)sqlite3_column_int(res, 0);
+        ip[1] = (uint8_t)sqlite3_column_int(res, 1);
+        ip[2] = (uint8_t)sqlite3_column_int(res, 2);
+        sqlite3_finalize(res);
+
+        if (ip[1] > 254) {
+            ip[0]++;
+            ip[1] = 0;
+        }
+        else if (ip[2] > 254) {
+            ip[1]++;
+            ip[2] = 0;
+        }
+        else {
+            ip[2]++;
+        }
+
+        if (ip[0] > 223) // >223 is reserved for multicast
+            return 0;    // TODO: Better end-of-internet handling - maybe
+                         // restart from the beginning?
+
+        // TODO: Check for subnet reservations
+        sqlite3_prepare_v2(db,
+                "UPDATE track SET a=?, b=?, c=? WHERE id=1",
+                43, &res, NULL);
+        sqlite3_bind_int(res, 1, ip[0]);
+        sqlite3_bind_int(res, 2, ip[1]);
+        sqlite3_bind_int(res, 3, ip[2]);
+        sqlite3_step(res);
+        sqlite3_finalize(res);
+        return 1;
+    }
+
+    sqlite3_finalize(res);
+    return 0;
+}
+
+
 /* Function: handle
  * ----------------
  *  Handle all input from clients
@@ -228,7 +315,7 @@ int handle(int client, char *buf) {
     int rc;
 
     char *sip;
-    char ip[4];
+    uint8_t ip[4];
     int size;
     char recursive;
 
@@ -259,7 +346,12 @@ int handle(int client, char *buf) {
         clients[client-3].active[0] = 1;
         clients[client-3].active[1] = 0;
         clients[client-3].active[2] = 0;
-        dprintf(client, "SCAN %s\r\n", "1.0.0.0/24");
+        if(!next_target(ip)) {
+            s_log('E', "Error generating next target");
+            write(client, "ERROR: Unable to generate target\r\n", 34);
+            return 0;
+        }
+        dprintf(client, "SCAN %d.%d.%d.0/24\r\n", ip[0], ip[1], ip[2]);
     }
 
     /* DONE command
