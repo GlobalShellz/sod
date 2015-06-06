@@ -22,17 +22,19 @@
 #include "sod.h"
 
 #define MAXEVENTS 64
+#define VERSION 2
 
 typedef struct cdata {
     char receiving; // currently receiving results
     uint8_t active[3]; // active subnet
+    uint8_t version;// client version number
     char *data;     // result buffer
     int datalen;    // size of data buffer
     char ip[46];    // client IP string
 } cdata;
 
 // Array of client data where fd-3 is the index
-cdata clients[64];
+cdata clients[MAXEVENTS];
 // Database connection
 static sqlite3 *db;
 // Client response validation regex
@@ -77,7 +79,7 @@ int sod_server(char *addr) {
             NULL);
 
     if (inet_pton(AF_INET, addr, &(server.sin_addr)) <= 0) {
-        s_log('E', "inet_pton error: %s", strerror(errno));
+        s_log('E', "Error interpreting IPv4 address: %s", strerror(errno));
         return EXIT_FAILURE;
     }
 
@@ -172,6 +174,7 @@ int sod_server(char *addr) {
                     epoll_ctl(efd, EPOLL_CTL_ADD, client_sock, &event);
 
                     strncat(clients[client_sock-3].ip, client_addr, 45);
+                    clients[client_sock-3].version = 0;
                 }
                 continue;
             }
@@ -431,6 +434,27 @@ int handle(int client, char *buf) {
         free(clients[client-3].data);
     }
 
+    /* HI command
+     * Allows a client to introduce itself with its version number
+     * Protocol is backwards-compatible enough that this should not be
+     * strict, it is just a way of notifying clients to update.
+     */
+    else if (l > 3 && strncmp(buf, "HI ", 3) == 0) {
+        clients[client-3].version = (uint8_t)atoi(buf+3);
+        if (clients[client-3].version != VERSION) {
+            s_log('I', "Client %s|%d is wrong version (%d)",
+                    clients[client-3].ip, client, clients[client-3].version);
+            dprintf(client, "ERROR: I want version %d!\r\n", VERSION);
+            /* strict version requirement?
+            close(client);
+            memset(&(clients[client-3]), 0, sizeof(cdata));
+            return 0;
+            */
+        }
+        else
+            dprintf(client, "HO %d\r\n", VERSION);
+    }
+
     /* ERROR report
      * Client encountered an error processing a server request, and was unable
      * to complete its active scan. Report the error, and save the active
@@ -457,7 +481,7 @@ int handle(int client, char *buf) {
      */
     else if (strncmp(buf, "LISTCLIENTS", l) == 0
             && strncmp(clients[client-3].ip, "127.0.0.1", 9) == 0) {
-        for (int i=0; i<64; i++) {
+        for (int i=0; i<MAXEVENTS; i++) {
             if(clients[i].ip[0])
                 dprintf(client, "%s\r\n", clients[i].ip);
         }
@@ -483,7 +507,7 @@ void server_quit(int sig) {
     sqlite3_stmt *res = NULL;
 
     s_log('I', "Shutting down due to signal %d.", sig);
-    for (int i=0; i<64; i++) {
+    for (int i=0; i<MAXEVENTS; i++) {
         if (clients[i].ip[0] && clients[i].active[0]) {
             sqlite3_finalize(res);
             sqlite3_prepare_v2(db,
