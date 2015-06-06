@@ -154,7 +154,7 @@ int sod_server(char *addr) {
                     }
 
                     inet_ntop(AF_INET, &(client.sin_addr), client_addr, 45);
-                    s_log('I', "Connection accepted from %s -> fd:%d", client_addr, sfd);
+                    s_log('I', "Connection accepted from %s -> fd:%d", client_addr, client_sock);
                     // TODO: This is copied from above. Make a function, idiot.
                     flags = fcntl(client_sock, F_GETFL, 0);
                     if (flags == -1) {
@@ -438,14 +438,16 @@ int handle(int client, char *buf) {
      */
     else if (l > 6 && strncmp(buf, "ERROR:", 6) == 0) {
         s_log('E', "Client %s|%d reported error: %s", clients[client-3].ip, client, buf+7);
-        sqlite3_prepare_v2(db,
-                "INSERT INTO missed VALUES (NULL, ?, ?, ?, 0, NULL)",
-                51, &res, NULL);
-        sqlite3_bind_int(res, 1, clients[client-3].active[0]);
-        sqlite3_bind_int(res, 2, clients[client-3].active[1]);
-        sqlite3_bind_int(res, 3, clients[client-3].active[2]);
-        sqlite3_step(res);
-        sqlite3_finalize(res);
+        if (clients[client-3].active[0]) {
+            sqlite3_prepare_v2(db,
+                    "INSERT INTO missed VALUES (NULL, ?, ?, ?, 0, NULL)",
+                    51, &res, NULL);
+            sqlite3_bind_int(res, 1, clients[client-3].active[0]);
+            sqlite3_bind_int(res, 2, clients[client-3].active[1]);
+            sqlite3_bind_int(res, 3, clients[client-3].active[2]);
+            sqlite3_step(res);
+            sqlite3_finalize(res);
+        }
         memset(clients[client-3].active, 0, 3);
     }
 
